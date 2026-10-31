@@ -1,0 +1,38 @@
+name: financial-home-flyway-tests
+
+services:
+  postgres-test:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: flyway_test
+      POSTGRES_USER: flyway_test
+      # Solo para esta base desechable, sin puertos publicados.
+      POSTGRES_HOST_AUTH_METHOD: trust
+    tmpfs:
+      - /var/lib/postgresql/data:size=512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flyway_test -d flyway_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    networks:
+      - test-network
+
+  migration-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.flyway-test
+    environment:
+      TEST_DB_URL: jdbc:postgresql://postgres-test:5432/flyway_test
+      TEST_DB_USERNAME: flyway_test
+      TEST_DB_PASSWORD: ""
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge
