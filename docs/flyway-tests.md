@@ -1,35 +1,21 @@
-# Pruebas aisladas de Flyway
+# Isolated Flyway tests
 
-Esta configuración es independiente de `../docker-compose.yml` y de su
-override. No ejecutarla combinando esos archivos con `-f`.
+This setup is independent of `../docker-compose.yml` and its override. Do not combine those files with this test configuration using `-f`.
 
-El Compose habitual define `financial_db` y `financial_backend_java` y el
-archivo base monta `/mnt/data/postgres_data`. El override cambia el servicio
-habitual `db` para usar tmpfs; no crea un entorno de pruebas independiente.
-Por eso estas pruebas usan su propio archivo y proyecto Compose.
+The regular Compose configuration uses application services and persistent database storage. These tests use a separate Compose file and project, PostgreSQL 15, and Maven with JDK 21. There are no fixed container names, published ports, repository mounts, or persistent volumes. PostgreSQL stores its data in tmpfs. Trust authentication is exclusively for this temporary database on the test network. Do not modify regular application secrets or settings.
 
-El entorno de pruebas usa PostgreSQL 15 (como el Compose principal) y Maven
-con JDK 21 (como la compilación del backend). No tiene nombres de contenedor
-fijos, puertos publicados, montajes del repositorio ni volúmenes persistentes.
-PostgreSQL guarda sus datos en tmpfs. La autenticación `trust` corresponde
-exclusivamente a esta base temporal accesible desde la red de pruebas.
-No modificar los secretos ni la configuración de la aplicación habitual.
+Maven receives only the `TEST_DB_*` connection variables from the test Compose file. The `db-test` profile enables Flyway, keeps Hibernate in `validate` mode, and disables Flyway clean. It runs `PostgresqlMigrationTests`, `EntityPersistenceTests`, and the application context test. Checks cover tables, foreign keys, constraints, migration validation, idempotence, and persistence of all ten entities. Entity tests use transactional rollback and also exercise composite foreign keys and partial unique indexes through JPA writes.
 
-Maven recibe únicamente las variables `TEST_DB_*` de este archivo. El perfil
-`db-test` activa Flyway y mantiene Hibernate en `validate` y Flyway clean
-deshabilitado. Se ejecutan `PostgresqlMigrationTests` y la prueba de carga
-del contexto con ese perfil. Las pruebas comprueban tablas, claves foráneas,
-restricciones, validación de migraciones e idempotencia.
+V1 now uses English identifiers and values. Always start a fresh disposable test project; an old test database contains the previous schema and migration checksum.
 
-## Comandos para Bash en Arch Linux
+## Bash commands
 
-Ejecutar desde una terminal donde Docker funcione. La primera ejecución
-puede descargar imágenes y dependencias Maven dentro del entorno Docker.
+Run these commands only after approval to execute test migrations and download any required images or Maven dependencies, from a terminal where Docker works.
 
 ```bash
 cd /home/brayan/Workspace/Financial-Home-Infra/Financial-Home-Backend-Java
 
-# Un proyecto nuevo por ejecución evita reutilizar una base de pruebas anterior.
+# A new project for each run avoids reusing an earlier test database.
 export FLYWAY_TEST_PROJECT="financial-flyway-test-$(date +%Y%m%d%H%M%S)-$$"
 
 docker compose -f compose.flyway-test.yaml -p "$FLYWAY_TEST_PROJECT" config --quiet
@@ -40,30 +26,23 @@ if docker compose -f compose.flyway-test.yaml -p "$FLYWAY_TEST_PROJECT" up \
 else
   FLYWAY_TEST_EXIT=$?
 fi
-printf 'Código de salida de las pruebas: %s\n' "$FLYWAY_TEST_EXIT"
+printf 'Test exit code: %s\n' "$FLYWAY_TEST_EXIT"
 
-# Conservar resultados antes de retirar los contenedores de pruebas.
+# Save reports before removing test containers.
 export FLYWAY_TEST_RESULTS="/tmp/$FLYWAY_TEST_PROJECT-results"
 mkdir -p "$FLYWAY_TEST_RESULTS"
 docker compose -f compose.flyway-test.yaml -p "$FLYWAY_TEST_PROJECT" logs \
   --no-color > "$FLYWAY_TEST_RESULTS/compose.log"
 docker compose -f compose.flyway-test.yaml -p "$FLYWAY_TEST_PROJECT" cp \
   migration-tests:/workspace/target/surefire-reports "$FLYWAY_TEST_RESULTS/"
-printf 'Resultados: %s\n' "$FLYWAY_TEST_RESULTS"
+printf 'Results: %s\n' "$FLYWAY_TEST_RESULTS"
 
-# Retirar únicamente los contenedores y la red de este proyecto de pruebas.
+# Remove only this test project's containers and network.
 docker compose -f compose.flyway-test.yaml -p "$FLYWAY_TEST_PROJECT" down
 ```
 
-Ejecutar los comandos en la misma terminal para conservar las variables.
-Si `config --quiet` falla, detenerse antes de ejecutar `up`.
-Si falla la construcción o Maven antes de iniciar Surefire, puede no existir
-`surefire-reports`; conservar `compose.log` y la salida de la construcción.
-No usar `down -v`, el Compose habitual ni nombres de proyectos de la aplicación.
-Al detener PostgreSQL se pierde la base temporal; los informes copiados en
-`/tmp` permanecen hasta que se limpie ese directorio.
+Use the same terminal to preserve the variables. If `config --quiet` fails, stop before running `up`. If the build or Maven fails before Surefire starts, `surefire-reports` may not exist; preserve `compose.log` and the build output.
 
-Para revisar el resultado, compartir el código de salida, el resumen
-`Tests run` / `BUILD SUCCESS` o `BUILD FAILURE` y los errores de los informes.
-Un código cero confirma éxito de las clases seleccionadas. Un fallo requiere
-revisar los registros antes de cambiar la migración o las pruebas.
+Do not use `down -v`, the regular Compose configuration, or application project names. Stopping PostgreSQL discards the temporary database; copied reports remain in `/tmp` until that directory is cleaned.
+
+Review the exit code, `Tests run`, `BUILD SUCCESS` or `BUILD FAILURE`, and report errors. Exit code zero confirms success for the selected classes. Inspect failures before changing the migration or tests.

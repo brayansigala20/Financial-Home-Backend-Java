@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: flyway_test
       POSTGRES_USER: flyway_test
-      # Solo para esta base desechable, sin puertos publicados.
+      # Only for this disposable database, with no published ports.
       POSTGRES_HOST_AUTH_METHOD: trust
     tmpfs:
       - /var/lib/postgresql/data:size=512m
