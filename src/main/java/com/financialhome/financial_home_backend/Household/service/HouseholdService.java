@@ -5,6 +5,9 @@ import com.financialhome.financial_home_backend.Household.entity.HouseholdMember
 import com.financialhome.financial_home_backend.Household.repository.HouseholdMemberRepository;
 import com.financialhome.financial_home_backend.Household.repository.HouseholdRepository;
 import com.financialhome.financial_home_backend.People.entity.Person;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +21,16 @@ public class HouseholdService {
             HouseholdMemberRepository householdMemberRepository) {
         this.householdRepository = householdRepository;
         this.householdMemberRepository = householdMemberRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Household> listVisibleHouseholds(UUID personId) {
+        return householdMemberRepository.findVisibleHouseholds(personId);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Household> findVisibleHousehold(UUID personId, UUID householdId) {
+        return householdMemberRepository.findVisibleHousehold(personId, householdId);
     }
 
     @Transactional
