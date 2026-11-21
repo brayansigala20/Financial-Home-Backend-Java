@@ -5,4 +5,4 @@ WORKDIR /workspace
 COPY pom.xml ./
 COPY src ./src
 
-CMD ["mvn", "-B", "-ntp", "-Dspring.profiles.active=db-test", "-Dtest=PostgresqlMigrationTests,EntityPersistenceTests,FinancialHomeBackendApplicationTests", "test"]
+CMD ["mvn", "-B", "-ntp", "-Dspring.profiles.active=db-test", "-Dtest=PostgresqlMigrationTests,EntityPersistenceTests,FinancialHomeBackendApplicationTests,HouseholdCreationTests", "test"]

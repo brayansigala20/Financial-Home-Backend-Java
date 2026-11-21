@@ -78,6 +78,10 @@ The translated schema must be applied with explicit approval before starting the
 
 See [isolated Flyway tests](docs/flyway-tests.md) for the Docker test workflow. Running that workflow applies migrations only to its disposable test database and requires approval to execute migrations and download dependencies.
 
+## Household creation
+
+`POST /api/households` accepts `{"name":"Family home"}`. The authentication integration must supply the user's UUID as the servlet principal name. The user must have an active account linked to a person. The endpoint returns HTTP 201 with `id`, `name`, and `status`; the service creates the household and its initial administrator in one transaction. `HouseholdCreationTests` supplies a test principal and exercises the endpoint against the migrated PostgreSQL schema. A real authentication provider still needs to be connected.
+
 ## Remaining work
 
-Implement the account service and repository, expose the household creation flow through the application layers, and add behavior tests as those features are implemented. These tasks require separate design decisions.
+Implement the account service and repository, connect authentication for household creation, and define the rules for household administration.
